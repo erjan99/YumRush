@@ -18,31 +18,42 @@ class MainPageView(APIView):
 
         products_list_serializer = ProductListSerializer(products, many=True)
 
-        cart, created = Cart.objects.get_or_create(user=request.user, is_active=True)
-        cart_serializer = CartSerializer(cart)
+        # Don't try to get cart for anonymous users
+        cart_data = None
+        if request.user.is_authenticated:
+            cart, created = Cart.objects.get_or_create(user=request.user, is_active=True)
+            cart_serializer = CartSerializer(cart)
+            cart_data = cart_serializer.data
 
-        data={
-            'categories':category_list_serializer,
-            'products':products_list_serializer,
-            'cart':cart_serializer,
+        data = {
+            'categories': category_list_serializer.data,  # Use .data here
+            'products': products_list_serializer.data,    # Use .data here
+            'cart': cart_data,
         }
 
         return Response(data)
 
     def post(self, request):
-        cart, created = Cart.objects.get_or_create(user=request.user)
+        # Add authentication check for post
+        if not request.user.is_authenticated:
+            return Response({'Error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        cart, created = Cart.objects.get_or_create(user=request.user, is_active=True)
         product_id = request.data.get('product_id')
         quantity = request.data.get('quantity', 1)
 
         if not product_id:
-            return Response({'Error:':'Product ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'Error': 'Product ID is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        product = Product.objects.get(id=product_id)
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({'Error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+
         cart_item, created = CartItem.objects.get_or_create(product=product, cart=cart)
-
         new_quantity = cart_item.quantity + quantity
 
-        if new_quantity < 0:
+        if new_quantity <= 0:
             cart_item.delete()
         else:
             cart_item.quantity = new_quantity
