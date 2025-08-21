@@ -29,3 +29,4 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_total_price(self, obj):
         return sum(items.total_price for item in obj.items.all())
+
