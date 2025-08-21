@@ -30,3 +30,9 @@ class MainPageView(APIView):
         return Response(data)
 
 
+class ProductDetailView(APIView):
+
+    def get(self, request, pk):
+        product = Product.objects.get(pk=pk)
+        serializer = ProductDetailSerializer(product)
+        return Response(serializer.data)
