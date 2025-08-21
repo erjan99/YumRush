@@ -5,7 +5,7 @@ from .models import *
 
 
 class CartItemSerializer(serializers.ModelSerializer):
-    product = ProductListSerializer
+    product = ProductListSerializer()
     total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:
@@ -14,7 +14,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 
 class CartSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer
+    items = CartItemSerializer(many=True, read_only=True)
     total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
     class Meta:

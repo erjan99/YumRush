@@ -35,6 +35,13 @@ class MyUser(AbstractBaseUser):
     created_date = models.DateTimeField(auto_now_add=True)
     objects = MyUserManager()
 
+    ROLE_CHOICES = (
+        ('user', 'User'),
+        ('manager', 'Manager'),
+        ('courier', 'Courier'),
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
+
     is_admin = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
