@@ -35,7 +35,7 @@ class Product(models.Model):
     discounted_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     ingredients = models.TextField(null=True, blank=True)
-    rating = models.DecimalField(max_digits=1, decimal_places=2, null=True, blank=True, default=0.0,)
+    rating = models.DecimalField(max_digits=1, decimal_places=1, null=True, blank=True, default=0.0,)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
 
     def __str__(self):
