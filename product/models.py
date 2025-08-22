@@ -47,6 +47,7 @@ class Product(models.Model):
     ingredients = models.TextField(null=True, blank=True)
     rating = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
+    grams = models.PositiveSmallIntegerField(default=0)
 
     def __str__(self):
         return self.name
