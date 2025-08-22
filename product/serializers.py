@@ -3,14 +3,14 @@ from .models import *
 
 
 class CategoryListSerializer(serializers.ModelSerializer):
-    image = serializers.FileField(use_url=True)
+    image = serializers.ImageField(use_url=True)
     class Meta:
         model = Category
         fields = ['id', 'name', 'image']
 
 
 class ProductListSerializer(serializers.ModelSerializer):
-    image = serializers.FileField(use_url=True)
+    image = serializers.ImageField(use_url=True)
     category = CategoryListSerializer()
 
     class Meta:

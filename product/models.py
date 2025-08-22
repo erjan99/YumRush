@@ -4,12 +4,24 @@ from django.db import models
 
 user = get_user_model()
 
+from django.db.models import ImageField
+import os
+
+class SVGAndImageField(ImageField):
+    def validate(self, value, model_instance):
+        if not value:
+            return
+        ext = os.path.splitext(value.name)[1].lower()
+        if ext == '.svg':
+            # Skip Pillow validation for SVGs
+            return
+        super().validate(value, model_instance)
 
 #PRODUCT RELATED MODELS
 class Category(models.Model):
     name = models.CharField(max_length=255)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
-    image = models.FileField(upload_to='categories/', null=True, blank=True)
+    image = SVGAndImageField(upload_to='categories/', null=True, blank=True)
 
     def __str__(self):
         # Показываем полный путь: "Еда > Фрукты > Яблоки"
