@@ -23,9 +23,6 @@ class Category(models.Model):
     image = SVGAndImageField(upload_to='categories/', null=True, blank=True)
 
     def __str__(self):
-        # Показываем полный путь: "Еда > Фрукты > Яблоки"
-        if self.parent:
-            return f"{self.parent} > {self.name}"
         return self.name
 
 
