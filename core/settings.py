@@ -148,7 +148,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 
 AUTHENTICATION_BACKENDS = [
-    'core.user.auth_backends.EmailBackend',
+    'user.auth_backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',  # Keep default as fallback
 ]
 
