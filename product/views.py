@@ -1,3 +1,6 @@
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
@@ -8,6 +11,41 @@ from .serializers import *
 
 
 class MainPageView(APIView):
+    @swagger_auto_schema(
+        operation_description="Get main page data with categories, products and cart",
+        manual_parameters=[
+            openapi.Parameter('category', openapi.IN_QUERY,
+                              description="Filter products by category ID", type=openapi.TYPE_INTEGER)
+        ],
+        responses={
+            200: openapi.Response(
+                description="Main page data",
+                examples={
+                    "application/json": {
+                        "categories": [
+                            {"id": 1, "name": "Burgers", "image": "http://example.com/media/categories/burgers.jpg"}
+                        ],
+                        "products": [
+                            {"id": 1, "name": "Cheeseburger", "image": "http://example.com/media/products/cheeseburger.jpg",
+                             "original_price": 10.99, "discounted_price": 8.99,
+                             "category": {"id": 1, "name": "Burgers", "image": "http://example.com/media/categories/burgers.jpg"},
+                             "rating": 4.5,
+                             "company": {"id": 1, "name": "Company Name", "logo": "http://example.com/media/companies/logo.png"},
+                             "grams": 250}
+                        ],
+                        "cart": {
+                            "id": 1,
+                            "items": [
+                                {"id": 1, "product": {"id": 1, "name": "Cheeseburger"}, "quantity": 2, "total_price": 17.98}
+                            ],
+                            "total_price": 17.98
+                        }
+                    }
+                }
+            )
+        }
+    )
+
     def get(self, request):
         categories = Category.objects.all()
         category_list_serializer = CategoryListSerializer(categories, many=True, context={'request':request})
@@ -32,6 +70,15 @@ class MainPageView(APIView):
 
         return Response(data)
 
+    @swagger_auto_schema(
+        operation_description="Add product to cart",
+        request_body=AddToCartSerializer,
+        responses={
+            200: CartSerializer,
+            401: "Authentication required",
+            404: "Product not found"
+        }
+    )
     def post(self, request):
         if not request.user.is_authenticated:
             return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -61,7 +108,13 @@ class MainPageView(APIView):
         return Response(cart_serializer.data)
 
 class ProductDetailView(APIView):
-
+    @swagger_auto_schema(
+        operation_description="Get detailed information about a product",
+        responses={
+            200: ProductDetailSerializer,
+            404: "Product not found"
+        }
+    )
     def get(self, request, pk):
         product = Product.objects.get(pk=pk)
         serializer = ProductDetailSerializer(product)

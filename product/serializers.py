@@ -29,3 +29,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name', 'original_price', 'discounted_price', 'category', 'rating', 'company', 'description', 'image', 'ingredients', 'grams']
+
+
+class AddToCartSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField(required=True)
+    quantity = serializers.IntegerField(default=1)
