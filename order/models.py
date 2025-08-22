@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import PositiveSmallIntegerField
+
 from product.models import Product
 
 user = get_user_model()
@@ -9,7 +11,14 @@ user = get_user_model()
 class Order(models.Model):
     user = models.ForeignKey(user, on_delete=models.CASCADE, related_name='orders')
     created_at = models.DateTimeField(auto_now_add=True)
+    STATUS_CHOICES = [
+        ('pending', 'В ожидании'),
+        ('in_progress', 'В процессе'),
+        ('delivered', 'Доставлено'),
+        ('cancelled', 'Отменено'),
+    ]
     status = models.CharField(max_length=50, default='Pending')  # e.g., Pending, Shipped, Delivered, Cancelled
+    rating = PositiveSmallIntegerField(null=True, blank=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
