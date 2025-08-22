@@ -10,14 +10,14 @@ from .serializers import *
 class MainPageView(APIView):
     def get(self, request):
         categories = Category.objects.all()
-        category_list_serializer = CategoryListSerializer(categories, many=True)
+        category_list_serializer = CategoryListSerializer(categories, many=True, context={'request':request})
 
         category_id = request.query_params.get('category', None)
         if category_id:
             products = Product.objects.filter(category_id=category_id)
         else:
             products = Product.objects.all()
-        products_list_serializer = ProductListSerializer(products, many=True)
+        products_list_serializer = ProductListSerializer(products, many=True, context={'request':request})
 
         cart = None
         if request.user.is_authenticated:
