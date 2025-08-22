@@ -13,3 +13,14 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+class UserLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+
+class UserOTPVerificationSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    otp_code = serializers.CharField(max_length=6, min_length=6)
+
+

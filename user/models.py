@@ -31,8 +31,12 @@ class MyUser(AbstractBaseUser):
     username = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=255, blank=True, null=True)
     avatar = models.ImageField(upload_to='media/user_avatars/', blank=True, null=True)
-    address = models.EmailField(max_length=255, blank=True, null=True)
+    address = models.TextField(max_length=255, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
+    is_2fa_enabled = models.BooleanField(default=False)
+
     objects = MyUserManager()
 
     ROLE_CHOICES = (

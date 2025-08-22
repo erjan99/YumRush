@@ -140,6 +140,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
 
+AUTHENTICATION_BACKENDS = [
+    'core.user.auth_backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Keep default as fallback
+]
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = 'erjansebat@gmail.com'
+EMAIL_HOST_PASSWORD = 'idno lkvl fgfx xtra'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
 # Настройка срока действия Access Token и Refresh Token
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Продолжительность жизни Access Token
