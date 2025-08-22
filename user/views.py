@@ -24,6 +24,7 @@ class UserRegisterView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class UserLoginView(APIView):
 
     def post(self, request):
@@ -67,6 +68,13 @@ class UserLoginView(APIView):
                     )
             return Response({'error':'User not found'},status=status.HTTP_404_NOT_FOUND)
         return Response({'error':'Not valid credentials'},status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserProfileView(APIView):
+    def get(self, request):
+        user = request.user
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
 
 
 class UserOTPVerificationView(APIView):

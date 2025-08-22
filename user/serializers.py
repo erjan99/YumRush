@@ -1,6 +1,7 @@
 from .models import MyUser
 from rest_framework import serializers
 
+
 class UserRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
@@ -14,6 +15,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
         return user
 
+
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -24,3 +26,7 @@ class UserOTPVerificationSerializer(serializers.Serializer):
     otp_code = serializers.CharField(max_length=6, min_length=6)
 
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = '__all__'
