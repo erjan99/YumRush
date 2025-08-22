@@ -9,7 +9,7 @@ user = get_user_model()
 class Category(models.Model):
     name = models.CharField(max_length=255)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
-    image = models.ImageField(upload_to='categories/', null=True, blank=True)
+    image = models.FileField(upload_to='categories/', null=True, blank=True)
 
     def __str__(self):
         # Показываем полный путь: "Еда > Фрукты > Яблоки"
@@ -20,7 +20,7 @@ class Category(models.Model):
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
-    logo = models.ImageField(upload_to='companies/', null=True, blank=True)
+    logo = models.FileField(upload_to='companies/', null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     rating = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
@@ -31,7 +31,7 @@ class Company(models.Model):
 class Product(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
-    image = models.ImageField(upload_to='products/')
+    image = models.FileField(upload_to='products/')
     original_price = models.DecimalField(max_digits=10, decimal_places=2)
     discounted_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
