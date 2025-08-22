@@ -3,6 +3,8 @@ import datetime
 
 from django.contrib.auth import user_login_failed, authenticate
 from django.core.mail import send_mail
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -10,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .services import *
 from .serializers import *
-from ..core import settings
+from django.conf import settings
 
 
 class UserRegisterView(APIView):
@@ -68,6 +70,7 @@ class UserLoginView(APIView):
 
 
 class UserOTPVerificationView(APIView):
+
     def post(self, request):
         serializer = UserOTPVerificationSerializer(data=request.data)
 
