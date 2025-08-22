@@ -20,7 +20,6 @@ class SVGAndImageField(ImageField):
 #PRODUCT RELATED MODELS
 class Category(models.Model):
     name = models.CharField(max_length=255)
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
     image = SVGAndImageField(upload_to='categories/', null=True, blank=True)
 
     def __str__(self):
