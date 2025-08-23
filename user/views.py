@@ -5,6 +5,7 @@ from django.contrib.auth import user_login_failed, authenticate
 from django.core.mail import send_mail
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -16,7 +17,23 @@ from django.conf import settings
 
 
 class UserRegisterView(APIView):
-
+    @swagger_auto_schema(
+        operation_description="Register a new user account",
+        request_body=UserRegisterSerializer,
+        responses={
+            201: openapi.Response(
+                description="User created successfully",
+                examples={
+                    "application/json": {
+                        "username": "newuser",
+                        "email": "user@example.com",
+                        "password": "••••••••"  # Password will be hashed and not returned in actual response
+                    }
+                }
+            ),
+            400: "Bad request - validation errors"
+        }
+    )
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -26,7 +43,34 @@ class UserRegisterView(APIView):
 
 
 class UserLoginView(APIView):
-
+    @swagger_auto_schema(
+        operation_description="Authenticate user with email and password",
+        request_body=UserLoginSerializer,
+        responses={
+            200: openapi.Response(
+                description="Login successful",
+                examples={
+                    "application/json": {
+                        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "user_id": 1,
+                        "email": "user@example.com",
+                        "username": "username"
+                    }
+                }
+            ),
+            200: openapi.Response(
+                description="2FA enabled - OTP code sent",
+                examples={
+                    "application/json": {
+                        "user_id": 1
+                    }
+                }
+            ),
+            400: "Invalid credentials",
+            404: "User not found"
+        }
+    )
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
@@ -69,8 +113,55 @@ class UserLoginView(APIView):
             return Response({'error':'User not found'},status=status.HTTP_404_NOT_FOUND)
         return Response({'error':'Not valid credentials'},status=status.HTTP_400_BAD_REQUEST)
 
+class UserLogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Logout the current user by blacklisting their JWT token",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['refresh'],
+            properties={
+                'refresh': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='JWT refresh token to blacklist'
+                ),
+            },
+        ),
+        responses={
+            200: openapi.Response(
+                description="Successfully logged out",
+                examples={
+                    "application/json": {
+                        "detail": "Successfully logged out."
+                    }
+                }
+            ),
+            401: "Authentication credentials not provided"
+        },
+        security=[{"Bearer": []}]
+    )
+    def post(self, request):
+        # Blacklist the token
+        try:
+            refresh_token = request.data.get("refresh")
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+
 
 class UserProfileView(APIView):
+    @swagger_auto_schema(
+        operation_description="Get the authenticated user's profile information",
+        responses={
+            200: UserProfileSerializer,
+            401: "Authentication credentials not provided"
+        },
+        security=[{"Bearer": []}]
+    )
+
     def get(self, request):
         user = request.user
         serializer = UserProfileSerializer(user)
@@ -78,7 +169,40 @@ class UserProfileView(APIView):
 
 
 class UserOTPVerificationView(APIView):
-
+    @swagger_auto_schema(
+        operation_description="Verify OTP code for two-factor authentication",
+        request_body=UserOTPVerificationSerializer,
+        responses={
+            200: openapi.Response(
+                description="OTP verification successful",
+                examples={
+                    "application/json": {
+                        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "user_id": 1,
+                        "email": "user@example.com",
+                        "username": "username"
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="Bad request",
+                examples={
+                    "application/json": {
+                        "error": "invalid OTP code"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="User not found",
+                examples={
+                    "application/json": {
+                        "error": "User not found"
+                    }
+                }
+            )
+        }
+    )
     def post(self, request):
         serializer = UserOTPVerificationSerializer(data=request.data)
 

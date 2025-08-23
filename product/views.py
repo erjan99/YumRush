@@ -70,6 +70,7 @@ class MainPageView(APIView):
 
         return Response(data)
 
+
     @swagger_auto_schema(
         operation_description="Add product to cart",
         request_body=AddToCartSerializer,
