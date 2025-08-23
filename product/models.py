@@ -30,7 +30,7 @@ class Company(models.Model):
     name = models.CharField(max_length=255)
     logo = models.FileField(upload_to='companies/', null=True, blank=True)
     address = models.TextField(null=True, blank=True)
-    number = models.PositiveSmallIntegerField(null=True, blank=True)
+    phone_number = models.CharField(max_length=123 ,null=True, blank=True)
     rating = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
     def __str__(self):

@@ -142,7 +142,6 @@ class UserLogoutView(APIView):
         security=[{"Bearer": []}]
     )
     def post(self, request):
-        # Blacklist the token
         try:
             refresh_token = request.data.get("refresh")
             token = RefreshToken(refresh_token)

@@ -1,4 +1,5 @@
 from .models import MyUser
+from order.models import Delivery
 from rest_framework import serializers
 
 
@@ -30,5 +31,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = '__all__'
+
+
+class UserDeliverySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Delivery
+        fields = ''
+
+
+
+
 
 

@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.signals import request_started
 from django.db import models
 from django.db.models import PositiveSmallIntegerField
 
@@ -37,6 +38,8 @@ class Delivery(models.Model):
 
     is_free_delivery = models.BooleanField(default=False)
     delivery_type = models.CharField(max_length=123, choices=DELIVERY_TYPE_CHOICES, default='pickup')
+    receiver_name = models.CharField(max_length=123)
+    receiver_phone_number = models.CharField(max_length=123)
     delivery_address = models.CharField(max_length=255, null=True, blank=True)  # Optional field for delivery address
     description = models.TextField(null=True, blank=True)  # Optional field for additional delivery information
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='deliveries')
