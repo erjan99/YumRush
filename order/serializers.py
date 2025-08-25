@@ -47,3 +47,36 @@ class OrderRatingSerializer(serializers.ModelSerializer):
         if self.intance.status != "delivered":
             raise serializers.ValidationError("Нельзя ставить рейтинг до завершения заказа.")
         return data
+
+
+class CreateOrderSerializer(serializers.Serializer):
+    delivery_type = serializers.ChoiceField(
+        choices=[('pickup', 'Pickup'), ('delivery', 'Delivery')],
+        required=True
+    )
+    receiver_name = serializers.CharField(max_length=123, required=True)
+    receiver_phone_number = serializers.CharField(max_length=123, required=True)
+    delivery_address = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    is_free_delivery = serializers.BooleanField(default=False)
+
+    def validate(self, data):
+        if data['delivery_type'] == 'delivery' and not data.get['delivery_address']:
+            raise serializers.ValidationError({
+                'delivery_address':'Address can not be empty'
+            })
+        return data
+
+class DeliverySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Delivery
+        fields = ['id', 'delivery_type', 'receiver_name', 'receiver_phone_number',
+                  'delivery_address', 'description', 'is_free_delivery', 'created_at']
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    deliveries = DeliverySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'created_at', 'status', 'total_price', 'items', 'deliveries']
+
