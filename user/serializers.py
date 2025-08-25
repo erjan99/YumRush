@@ -43,7 +43,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class UserDeliverySerializer(serializers.ModelSerializer):
     class Meta:
         model = Delivery
-        fields = ''
+        fields = '__all__'
 
 
 
