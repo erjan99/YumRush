@@ -8,6 +8,17 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         model = MyUser
         fields = ('username', 'email', 'password')
 
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long")
+        return value
+
+    def validate_email(self, value):
+        if MyUser.objects.filter(email=value).exists():
+            raise serializers.ValidationError("User with this email already exists")
+        return value
+
     def create(self, validated_data):
         user = MyUser(**validated_data)
 

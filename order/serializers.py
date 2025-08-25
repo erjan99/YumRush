@@ -49,6 +49,14 @@ class OrderRatingSerializer(serializers.ModelSerializer):
         return data
 
 
+class UserOrderHistorySerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    class Meta:
+        model = Order
+        fields = ['id', 'created_at', 'status', 'total_price', 'items']
+
+
+
 class CreateOrderSerializer(serializers.Serializer):
     delivery_type = serializers.ChoiceField(
         choices=[('pickup', 'Pickup'), ('delivery', 'Delivery')],
@@ -66,11 +74,13 @@ class CreateOrderSerializer(serializers.Serializer):
             })
         return data
 
+
 class DeliverySerializer(serializers.ModelSerializer):
     class Meta:
         model = Delivery
         fields = ['id', 'delivery_type', 'receiver_name', 'receiver_phone_number',
                   'delivery_address', 'description', 'is_free_delivery', 'created_at']
+
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
@@ -79,4 +89,13 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'created_at', 'status', 'total_price', 'items', 'deliveries']
+
+
+
+# --- COURIER ---
+
+class CourierOrderDeliverySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order, Delivery
+        fields = ['id', 'created_at', 'status', 'delivery_address', 'total_price']
 

@@ -14,6 +14,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .services import *
 from .serializers import *
 from django.conf import settings
+from django.db import IntegrityError
+
 
 
 class UserRegisterView(APIView):
@@ -22,12 +24,13 @@ class UserRegisterView(APIView):
         request_body=UserRegisterSerializer,
         responses={
             201: openapi.Response(
-                description="User created successfully",
+                description="User created successfully, OTP code sent",
                 examples={
                     "application/json": {
+                        "user_id": 1,
                         "username": "newuser",
                         "email": "user@example.com",
-                        "password": "••••••••"  # Password will be hashed and not returned in actual response
+                        "message": "OTP код отправлен на ваш email"
                     }
                 }
             ),
@@ -37,9 +40,46 @@ class UserRegisterView(APIView):
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            try:
+                user = serializer.save()
+
+                # Генерируем и сохраняем OTP
+                otp_code = generateOTP()
+                user.otp = otp_code
+                user.otp_created_at = timezone.now()
+                user.save()
+
+                # Отправляем OTP на email
+                try:
+                    send_mail(
+                        subject='Подтверждение регистрации',
+                        message=f'Добро пожаловать! Ваш код подтверждения: {otp_code}',
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[user.email],
+                        fail_silently=False,
+                    )
+                except Exception as e:
+                    # Логируем ошибку отправки email
+                    print(f"Ошибка отправки email: {e}")
+                    # Можно также удалить пользователя, если email критичен
+                    # user.delete()
+                    # return Response({'error': 'Ошибка отправки email'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                response_data = {
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'message': 'OTP код отправлен на ваш email. Подтвердите регистрацию.'
+                }
+                return Response(response_data, status=status.HTTP_201_CREATED)
+
+            except IntegrityError:
+                return Response(
+                    {'error': 'Пользователь с таким email уже существует'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class UserLoginView(APIView):
@@ -167,6 +207,7 @@ class UserProfileView(APIView):
         return Response(serializer.data)
 
 
+#OTP VALIDATION
 class UserOTPVerificationView(APIView):
     @swagger_auto_schema(
         operation_description="Verify OTP code for two-factor authentication",
@@ -242,3 +283,102 @@ class UserOTPVerificationView(APIView):
                 }, status=status.HTTP_200_OK
             )
         return Response({'error':'Invalid information provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserRegistrationOTPVerificationView(APIView):
+    @swagger_auto_schema(
+        operation_description="Verify OTP code for new user registration and complete the registration process",
+        request_body=UserOTPVerificationSerializer,
+        responses={
+            200: openapi.Response(
+                description="Registration completed successfully",
+                examples={
+                    "application/json": {
+                        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "user_id": 1,
+                        "email": "user@example.com",
+                        "username": "username",
+                        "message": "Registration completed successfully"
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="Bad request",
+                examples={
+                    "application/json": {
+                        "error": "Invalid OTP code"
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="User not found",
+                examples={
+                    "application/json": {
+                        "error": "User not found"
+                    }
+                }
+            )
+        }
+    )
+    def post(self, request):
+        serializer = UserOTPVerificationSerializer(data=request.data)
+
+        if serializer.is_valid(raise_exception=True):
+            user_id = serializer.validated_data['user_id']
+            entered_otp = serializer.validated_data['otp_code']
+
+            try:
+                user = MyUser.objects.get(id=user_id)
+            except MyUser.DoesNotExist:
+                return Response(
+                    {'error': 'User not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Проверка срока действия OTP
+            otp_expiry_minutes = 10  # Для регистрации можно дать больше времени
+            current_time = timezone.now()
+
+            if user.otp_created_at and (current_time - user.otp_created_at).total_seconds() > (otp_expiry_minutes * 60):
+                user.otp = None
+                user.otp_created_at = None
+                user.save()
+                return Response(
+                    {'error': 'OTP код истек. Запросите новый код'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Проверка OTP кода
+            if not verifyOTP(entered_otp, user.otp):
+                return Response(
+                    {'error': 'Неверный OTP код'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Очищаем OTP после успешной верификации
+            user.otp = None
+            user.otp_created_at = None
+            # Можно также активировать пользователя, если нужно
+            # user.is_active = True
+            user.save()
+
+            # Генерируем JWT токены для автоматического логина
+            refresh = RefreshToken.for_user(user)
+
+            return Response(
+                {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                    'user_id': user.id,
+                    'email': user.email,
+                    'username': user.username,
+                    'message': 'Регистрация успешно завершена'
+                },
+                status=status.HTTP_200_OK
+            )
+
+        return Response(
+            {'error': 'Предоставлена неверная информация'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
