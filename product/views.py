@@ -60,6 +60,7 @@ class MainPageView(APIView):
         cart_serializer = CartSerializer(cart)
         return Response(cart_serializer.data)
 
+
 class ProductDetailView(APIView):
 
     def get(self, request, pk):

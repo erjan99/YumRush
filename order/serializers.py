@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from product.models import Product
 from product.serializers import ProductDetailSerializer, ProductListSerializer
 from .models import *
+
+# --- CART ---
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -23,6 +24,8 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_total_price(self, obj):
         return sum(item.total_price for item in obj.items.all())
+
+# --- ORDER ---
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -47,3 +50,18 @@ class OrderRatingSerializer(serializers.ModelSerializer):
         if self.intance.status != "delivered":
             raise serializers.ValidationError("Нельзя ставить рейтинг до завершения заказа.")
         return data
+
+
+class UserOrderHistorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Order
+        fields = ['id', 'created_at', 'status', 'total_price']
+
+
+# --- COURIER ---
+
+class CourierOrderDeliverySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order, Delivery
+        fields = ['id', 'created_at', 'status', 'delivery_address', 'total_price']

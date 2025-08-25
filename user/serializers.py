@@ -30,3 +30,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = '__all__'
+
+
+# --- COURIER ---
+
+
+class CourierSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = MyUser
+        fields = ['id', 'username', 'email', 'phone_number']
