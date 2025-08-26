@@ -42,7 +42,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = ('username', 'email', 'phone_number', 'avatar', 'address')
+        fields = ('username', 'email', 'phone_number', 'avatar', 'address', 'is_2fa_enabled')
         read_only_fields = ('email', )
 
 class UserBalanceTopUpSerializer(serializers.Serializer):

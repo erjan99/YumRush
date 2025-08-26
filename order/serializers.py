@@ -56,6 +56,12 @@ class UserOrderHistorySerializer(serializers.ModelSerializer):
         fields = ['id', 'created_at', 'status', 'total_price', 'items']
 
 
+class UserOrderHistoryDetailSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    class Meta:
+        model = Order
+        fields = ['id', 'created_at', 'status', 'total_price', 'items']
+
 
 class CreateOrderSerializer(serializers.Serializer):
     delivery_type = serializers.ChoiceField(

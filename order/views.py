@@ -161,3 +161,14 @@ class CreateOrderView(APIView):
             return Response(order_serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderHistoryDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        order = Order.objects.get(id=pk, user=request.user)
+        if not order:
+            return Response({'error': 'Заказ не найден'}, status=status.HTTP_404_NOT_FOUND)
+        serializers = UserOrderHistoryDetailSerializer(order)
+        return Response(serializers.data, status=status.HTTP_200_OK)
