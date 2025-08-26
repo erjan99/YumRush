@@ -18,7 +18,7 @@ from django.conf import settings
 from django.db import IntegrityError
 
 
-
+#AUTHENTICATION
 class UserRegisterView(APIView):
     @swagger_auto_schema(
         operation_description="Register a new user account",
@@ -141,8 +141,11 @@ class UserLoginView(APIView):
                     }
                     return Response(data, status=status.HTTP_200_OK)
                 else:
+                    refresh = RefreshToken.for_user(user)
                     return Response(
                         {
+                            'refresh':str(refresh),
+                            'access':str(refresh.access_token),
                             'user_id':user.id,
                             'email':user.email,
                             'username':user.username
@@ -150,6 +153,7 @@ class UserLoginView(APIView):
                     )
             return Response({'error':'User not found'},status=status.HTTP_404_NOT_FOUND)
         return Response({'error':'Not valid credentials'},status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class UserLogoutView(APIView):
@@ -190,6 +194,8 @@ class UserLogoutView(APIView):
             return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
 
 
+#PROFILE
+
 class UserProfileView(APIView):
     @swagger_auto_schema(
         operation_description="Get the authenticated user's profile information",
@@ -204,6 +210,7 @@ class UserProfileView(APIView):
         user = request.user
         serializer = UserProfileSerializer(user)
         return Response(serializer.data)
+
 
 
 class UserProfileUpdateView(UpdateAPIView):
@@ -222,6 +229,46 @@ class UserProfileUpdateView(UpdateAPIView):
         },
         security=[{"Bearer": []}]
     )
+    def get_object(self):
+        return self.request.user
+
+
+
+class UserBalanceTopUpView(UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserBalanceTopUpSerializer
+
+    @swagger_auto_schema(
+        operation_description="Top up user balance",
+        request_body=UserBalanceTopUpSerializer,
+        responses={
+            200: openapi.Response(
+                description="Balance updated successfully",
+                examples={
+                    "application/json": {
+                        "balance": "150.00",
+                        "message": "Balance topped up successfully"
+                    }
+                }
+            ),
+            400: "Invalid amount"
+        },
+        security=[{"Bearer": []}]
+    )
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            amount = serializer.validated_data['amount']
+            user = request.user
+
+            user.balance = user.balance + amount
+            user.save()
+            return Response({
+                'balance': user.balance,
+                'message': 'Balance topped up successfully'
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def get_object(self):
         return self.request.user
 

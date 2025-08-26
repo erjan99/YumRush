@@ -36,6 +36,7 @@ class MyUser(AbstractBaseUser):
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_created_at = models.DateTimeField(blank=True, null=True)
     is_2fa_enabled = models.BooleanField(default=False)
+    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     objects = MyUserManager()
 

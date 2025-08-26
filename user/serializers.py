@@ -45,6 +45,8 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'phone_number', 'avatar', 'address')
         read_only_fields = ('email', )
 
+class UserBalanceTopUpSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
 
 
 class UserDeliverySerializer(serializers.ModelSerializer):
