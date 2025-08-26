@@ -114,6 +114,12 @@ class CreateOrderView(APIView):
                 'error': 'Корзина не найдена'
             }, status=status.HTTP_404_NOT_FOUND)
 
+        cart_total_price = sum(item.total_price for item in cart.items.all())
+
+
+        if request.user.balance < cart_total_price:
+            return Response({'error': 'Недостаточно средств на счету. Попробуйте еще раз.'}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = CreateOrderSerializer(data=request.data)
         if serializer.is_valid():
             # Создаем заказ
@@ -131,6 +137,8 @@ class CreateOrderView(APIView):
                     quantity=cart_item.quantity
                 )
 
+            request.user.balance -= cart_total_price
+            request.user.save()
             # Создаем информацию о доставке
             delivery_data = serializer.validated_data
             Delivery.objects.create(
