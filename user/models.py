@@ -63,3 +63,15 @@ class MyUser(AbstractBaseUser):
     @property
     def is_staff(self):
         return self.is_admin
+
+class TemporaryRegistration(models.Model):
+    username = models.CharField(max_length=150)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128)  # Will store hashed password
+    otp = models.CharField(max_length=6, null=True)
+    otp_created_at = models.DateTimeField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Auto-delete after 24 hours
+        indexes = [models.Index(fields=['created_at'])]

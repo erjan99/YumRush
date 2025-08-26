@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 import datetime
 
@@ -12,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .models import TemporaryRegistration
 from .services import *
 from .serializers import *
 from django.conf import settings
@@ -42,21 +44,27 @@ class UserRegisterView(APIView):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                user = serializer.save()
+                if MyUser.objects.filter(email=serializer.validated_data['email']).exists():
+                    return Response(
+                        {'error': 'Пользователь с таким email уже существует'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                temp_reg = TemporaryRegistration(
+                    username=serializer.validated_data['username'],
+                    email=serializer.validated_data['email'],
+                )
+                temp_reg.password = make_password(serializer.validated_data['password'])
 
-                # Генерируем и сохраняем OTP
                 otp_code = generateOTP()
-                user.otp = otp_code
-                user.otp_created_at = timezone.now()
-                user.save()
-
-                # Отправляем OTP на email
+                temp_reg.otp = otp_code
+                temp_reg.otp_created_at = timezone.now()
+                temp_reg.save()
                 try:
                     send_mail(
                         subject='Подтверждение регистрации',
                         message=f'Добро пожаловать! Ваш код подтверждения: {otp_code}',
                         from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[user.email],
+                        recipient_list=[temp_reg.email],
                         fail_silently=False,
                     )
                 except Exception as e:
@@ -67,9 +75,9 @@ class UserRegisterView(APIView):
                     # return Response({'error': 'Ошибка отправки email'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 response_data = {
-                    'user_id': user.id,
-                    'username': user.username,
-                    'email': user.email,
+                    'user_id': temp_reg.id,
+                    'username': temp_reg.username,
+                    'email': temp_reg.email,
                     'message': 'OTP код отправлен на ваш email. Подтвердите регистрацию.'
                 }
                 return Response(response_data, status=status.HTTP_201_CREATED)
@@ -274,7 +282,7 @@ class UserBalanceTopUpView(UpdateAPIView):
 
 
 #OTP VALIDATION
-class UserOTPVerificationView(APIView):
+class UserLoginOTPVerificationView(APIView):
     @swagger_auto_schema(
         operation_description="Verify OTP code for two-factor authentication",
         request_body=UserOTPVerificationSerializer,
@@ -313,31 +321,41 @@ class UserOTPVerificationView(APIView):
         serializer = UserOTPVerificationSerializer(data=request.data)
 
         if serializer.is_valid(raise_exception=True):
-            user_id = serializer.validated_data['user_id']
+            temp_id = serializer.validated_data['user_id']
             entered_otp = serializer.validated_data['otp_code']
 
             try:
-                user = MyUser.objects.get(id=user_id)
-            except:
-                return Response({'error':'User not found'}, status=status.HTTP_404_NOT_FOUND)
+                temp_reg = TemporaryRegistration.objects.get(id=temp_id)
+            except TemporaryRegistration.DoesNotExist:
+                return Response({'error':'Registration request not found'}, status=status.HTTP_404_NOT_FOUND)
 
             otp_expiry_minutes = 3
-            user_otp = user.otp
+            user_otp = temp_reg.otp
             current_time = timezone.now()
 
-            if user.otp_created_at and (current_time - user.otp_created_at).total_seconds() > (otp_expiry_minutes * 60):
-                user.otp = None
-                user.otp_created_at = None
-                user.save()
+            if temp_reg.otp_created_at and (current_time - temp_reg.otp_created_at).total_seconds() > (otp_expiry_minutes * 60):
+                temp_reg.otp = None
+                temp_reg.otp_created_at = None
+                temp_reg.save()
                 return Response({'error':'OTP code has expired. Send a new one'}, status=status.HTTP_400_BAD_REQUEST)
 
 
             if not verifyOTP(entered_otp, user_otp):
                 return Response({'error':'invalid OTP code'},status=status.HTTP_400_BAD_REQUEST)
-            user.otp = None
+            temp_reg.otp = None
+            temp_reg.save()
+
+            user = MyUser(
+                username=temp_reg.username,
+                email=temp_reg.email,
+            )
+            user.password = temp_reg.password
             user.save()
 
+            temp_reg.delete()
+
             refresh = RefreshToken.for_user(user)
+            user_id = user.id
 
             return Response(
                 {

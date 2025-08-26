@@ -12,7 +12,7 @@ urlpatterns = [
     path('balance_top_up/', UserBalanceTopUpView.as_view()),
 
     #OTP
-    path('login_otp_verification/', UserOTPVerificationView.as_view()),
+    path('login_otp_verification/', UserLoginOTPVerificationView.as_view()),
     path('registration_otp_verification/', UserRegistrationOTPVerificationView.as_view()),
 
 ]
