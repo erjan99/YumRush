@@ -39,6 +39,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = MyUser
         fields = '__all__'
 
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('username', 'email', 'phone_number', 'avatar', 'address')
+        read_only_fields = ('email', )
+
+
 
 class UserDeliverySerializer(serializers.ModelSerializer):
     class Meta:

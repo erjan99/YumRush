@@ -5,6 +5,7 @@ from django.contrib.auth import user_login_failed, authenticate
 from django.core.mail import send_mail
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.generics import UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -140,11 +141,8 @@ class UserLoginView(APIView):
                     }
                     return Response(data, status=status.HTTP_200_OK)
                 else:
-                    refresh = RefreshToken.for_user(user)
                     return Response(
                         {
-                            'refresh':str(refresh),
-                            'access':str(refresh.access_token),
                             'user_id':user.id,
                             'email':user.email,
                             'username':user.username
@@ -152,6 +150,7 @@ class UserLoginView(APIView):
                     )
             return Response({'error':'User not found'},status=status.HTTP_404_NOT_FOUND)
         return Response({'error':'Not valid credentials'},status=status.HTTP_400_BAD_REQUEST)
+
 
 class UserLogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -205,6 +204,26 @@ class UserProfileView(APIView):
         user = request.user
         serializer = UserProfileSerializer(user)
         return Response(serializer.data)
+
+
+class UserProfileUpdateView(UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    queryset = MyUser.objects.all()
+    serializer_class = UserProfileUpdateSerializer
+
+    @swagger_auto_schema(
+        operation_description="Update the authenticated user's profile information",
+        request_body=UserProfileUpdateSerializer,
+        responses={
+            200: UserProfileUpdateSerializer,
+            400: "Bad request - validation errors",
+            401: "Authentication credentials not provided",
+            403: "Permission denied - cannot update other users' profiles"
+        },
+        security=[{"Bearer": []}]
+    )
+    def get_object(self):
+        return self.request.user
 
 
 #OTP VALIDATION
