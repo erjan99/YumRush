@@ -37,7 +37,7 @@ class UserOTPVerificationSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
-        fields = '__all__'
+        fields = ('id', 'username', 'email', 'phone_number', 'avatar', 'address', 'is_2fa_enabled', 'created_date', 'role', 'balance')
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -53,6 +53,14 @@ class UserDeliverySerializer(serializers.ModelSerializer):
     class Meta:
         model = Delivery
         fields = '__all__'
+
+
+class CourierAccountCreationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MyUser
+        fields = ('username', 'email', 'password', 'phone_number', )
+
+
 
 
 

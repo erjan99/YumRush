@@ -1,5 +1,6 @@
 
 from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -13,13 +14,24 @@ class OrderRateView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Rate a delivered order",
+        tags=['Orders'],
+        operation_id='orders_rate',
+        operation_description="Оценить доставленный заказ",
         request_body=OrderRatingSerializer,
+        manual_parameters=[
+            openapi.Parameter(
+                name='pk',
+                in_=openapi.IN_PATH,
+                description='ID заказа',
+                type=openapi.TYPE_INTEGER,
+                required=True,
+            )
+        ],
         responses={
-            200: "Rating successfully added",
-            400: "Bad request - order not delivered or validation errors",
-            404: "Order not found",
-            401: "Authentication required"
+            200: openapi.Response(description="Оценка успешно добавлена"),
+            400: openapi.Response(description="Ошибка валидации или заказ не доставлен"),
+            404: openapi.Response(description="Заказ не найден"),
+            401: openapi.Response(description="Требуется аутентификация")
         }
     )
     def post(self, request, pk):
@@ -54,14 +66,19 @@ class UserOrderHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Get user's order history",
+        tags=['Orders'],
+        operation_id='orders_history_list',
+        operation_description="Получить историю заказов пользователя",
         responses={
-            200: UserOrderHistorySerializer(many=True),
-            401: "Authentication required"
+            200: openapi.Response(
+                description="История заказов",
+                schema=UserOrderHistorySerializer(many=True)
+            ),
+            401: openapi.Response(description="Требуется аутентификация")
         }
     )
     def get(self, request):
-        orders = Order.objects.filter(user=request.user).order_by('-created_at')
+        orders = Order.objects.filter(user=request.user, status='delivered').order_by('-created_at')
         serializer = UserOrderHistorySerializer(orders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -70,11 +87,16 @@ class CourierOrdersView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Get all orders for courier",
+        tags=['Courier'],
+        operation_id='courier_orders_list',
+        operation_description="Получить список всех заказов для курьера",
         responses={
-            200: OrderSerializer(many=True),
-            403: "Permission denied - not a courier",
-            401: "Authentication required"
+            200: openapi.Response(
+                description="Список заказов",
+                schema=OrderSerializer(many=True)
+            ),
+            403: openapi.Response(description="Доступ запрещен - не курьер"),
+            401: openapi.Response(description="Требуется аутентификация")
         }
     )
     def get(self, request):
@@ -88,17 +110,47 @@ class CourierOrdersView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class CourierCompletedOrdersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=['Courier'],
+        operation_id='courier_completed_orders_list',
+        operation_description="Получить список заказов, которые были выполнены курьером",
+        responses={
+            200: openapi.Response(
+                description="Список выполненных заказов",
+                schema=OrderSerializer(many=True)
+            ),
+            403: openapi.Response(description="Доступ запрещен - не курьер"),
+        }
+    )
+    def get(self, request):
+        if request.user.role != 'courier':
+            return Response({
+                "error": "Недостаточно прав. Только курьеры могут просматривать заказы"
+            }, status=status.HTTP_403_FORBIDDEN)
+        orders = Order.objects.filter(assigned_courier=request.user, status='delivered').order_by('-created_at')
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_description="Create order from cart with delivery information",
+        tags=['Orders'],
+        operation_id='orders_create',
+        operation_description="Создать заказ из корзины с информацией о доставке",
         request_body=CreateOrderSerializer,
         responses={
-            201: OrderSerializer,
-            400: "Bad request - validation errors or empty cart",
-            401: "Authentication required",
-            404: "Cart not found"
+            201: openapi.Response(
+                description="Заказ успешно создан",
+                schema=OrderSerializer
+            ),
+            400: openapi.Response(description="Ошибка валидации или пустая корзина"),
+            401: openapi.Response(description="Требуется аутентификация"),
+            404: openapi.Response(description="Корзина не найдена")
         }
     )
     def post(self, request):
@@ -139,6 +191,8 @@ class CreateOrderView(APIView):
 
             request.user.balance -= cart_total_price
             request.user.save()
+
+            is_free_delivery = True if cart_total_price < 1000 else False
             # Создаем информацию о доставке
             delivery_data = serializer.validated_data
             Delivery.objects.create(
@@ -148,7 +202,7 @@ class CreateOrderView(APIView):
                 receiver_phone_number=delivery_data['receiver_phone_number'],
                 delivery_address=delivery_data.get('delivery_address', ''),
                 description=delivery_data.get('description', ''),
-                is_free_delivery=delivery_data.get('is_free_delivery', False)
+                is_free_delivery=delivery_data.get('is_free_delivery', is_free_delivery)
             )
 
             # Очищаем корзину
@@ -165,6 +219,29 @@ class CreateOrderView(APIView):
 
 class OrderHistoryDetailView(APIView):
     permission_classes = [IsAuthenticated]
+    @swagger_auto_schema(
+        tags=['Orders'],
+        operation_id='orders_history_detail',
+        operation_description='Получить подробную информацию о заказе текущего пользователя по идентификатору.',
+        manual_parameters=[
+            openapi.Parameter(
+                name='pk',
+                in_=openapi.IN_PATH,
+                description='ID заказа',
+                type=openapi.TYPE_INTEGER,
+                required=True,
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description='Детали заказа',
+                schema=UserOrderHistoryDetailSerializer
+            ),
+            401: openapi.Response(description='Неавторизован'),
+            404: openapi.Response(description='Заказ не найден'),
+        }
+    )
+
 
     def get(self, request, pk):
         order = Order.objects.get(id=pk, user=request.user)

@@ -23,6 +23,7 @@ from django.db import IntegrityError
 #AUTHENTICATION
 class UserRegisterView(APIView):
     @swagger_auto_schema(
+        tags=['auth'],
         operation_description="Register a new user account",
         request_body=UserRegisterSerializer,
         responses={
@@ -93,6 +94,7 @@ class UserRegisterView(APIView):
 
 class UserLoginView(APIView):
     @swagger_auto_schema(
+        tags=['auth'],
         operation_description="Authenticate user with email and password",
         request_body=UserLoginSerializer,
         responses={
@@ -155,6 +157,7 @@ class UserLoginView(APIView):
                             'refresh':str(refresh),
                             'access':str(refresh.access_token),
                             'user_id':user.id,
+                            'user_role':user.role,
                             'email':user.email,
                             'username':user.username
                         }, status=status.HTTP_200_OK
@@ -168,6 +171,7 @@ class UserLogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
+        tags=['auth'],
         operation_description="Logout the current user by blacklisting their JWT token",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -206,6 +210,7 @@ class UserLogoutView(APIView):
 
 class UserProfileView(APIView):
     @swagger_auto_schema(
+        tags=['user'],
         operation_description="Get the authenticated user's profile information",
         responses={
             200: UserProfileSerializer,
@@ -227,6 +232,7 @@ class UserProfileUpdateView(UpdateAPIView):
     serializer_class = UserProfileUpdateSerializer
 
     @swagger_auto_schema(
+        tags=['user'],
         operation_description="Update the authenticated user's profile information",
         request_body=UserProfileUpdateSerializer,
         responses={
@@ -247,6 +253,7 @@ class UserBalanceTopUpView(UpdateAPIView):
     serializer_class = UserBalanceTopUpSerializer
 
     @swagger_auto_schema(
+        tags=['user'],
         operation_description="Top up user balance",
         request_body=UserBalanceTopUpSerializer,
         responses={
@@ -284,6 +291,7 @@ class UserBalanceTopUpView(UpdateAPIView):
 #OTP VALIDATION
 class UserLoginOTPVerificationView(APIView):
     @swagger_auto_schema(
+        tags=['auth'],
         operation_description="Verify OTP code for two-factor authentication",
         request_body=UserOTPVerificationSerializer,
         responses={
@@ -362,6 +370,7 @@ class UserLoginOTPVerificationView(APIView):
                     'refresh':str(refresh),
                     'access':str(refresh.access_token),
                     'user_id':user_id,
+                    'user_role':user.role,
                     'email':user.email,
                     'username':user.username
                 }, status=status.HTTP_200_OK
@@ -371,6 +380,7 @@ class UserLoginOTPVerificationView(APIView):
 
 class UserRegistrationOTPVerificationView(APIView):
     @swagger_auto_schema(
+        tags=['auth'],
         operation_description="Verify OTP code for new user registration and complete the registration process",
         request_body=UserOTPVerificationSerializer,
         responses={
@@ -455,6 +465,7 @@ class UserRegistrationOTPVerificationView(APIView):
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),
                     'user_id': user.id,
+                    'user_role': user.role,
                     'email': user.email,
                     'username': user.username,
                     'message': 'Регистрация успешно завершена'
@@ -466,3 +477,10 @@ class UserRegistrationOTPVerificationView(APIView):
             {'error': 'Предоставлена неверная информация'},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+#MANAGER
+
+class ManagerCourierCreationView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ManagerCourierCreationSerializer

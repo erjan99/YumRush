@@ -183,4 +183,16 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
 }
 
+# python
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'DOC_EXPANSION': 'none',      # компактно свернуто
+    'DEEP_LINKING': True,         # ссылки на конкретные операции
+    'FILTER': True,               # строка поиска в UI
+    'DISPLAY_OPERATION_ID': True, # показывать operationId (удобно искать)
+    'OPERATIONS_SORTER': 'method',# сортировка операций внутри тега: 'alpha' или 'method'
+    'TAGS_SORTER': "function(a, b) { const order = ['Auth','Users','Products','Categories','Cart','Orders']; return order.indexOf(a) - order.indexOf(b); }",
+    # сортировка самих тегов: по алфавиту
+}
+
 

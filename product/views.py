@@ -13,6 +13,7 @@ from .serializers import *
 
 class MainPageView(APIView):
     @swagger_auto_schema(
+        tags=['main_page'],
         operation_description="Get main page data with categories, products and cart",
         manual_parameters=[
             openapi.Parameter('category', openapi.IN_QUERY,
@@ -78,6 +79,7 @@ class MainPageView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
+        tags=['main_page'],
         operation_description="Add product to cart",
         request_body=AddToCartSerializer,
         responses={
@@ -144,6 +146,7 @@ class MainPageView(APIView):
 
 class ProductDetailView(APIView):
     @swagger_auto_schema(
+        tags=['product'],
         operation_description="Get detailed information about a product",
         responses={
             200: ProductDetailSerializer,
