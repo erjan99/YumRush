@@ -17,14 +17,8 @@ class SVGAndImageField(ImageField):
             return
         super().validate(value, model_instance)
 
+
 #PRODUCT RELATED MODELS
-class Category(models.Model):
-    name = models.CharField(max_length=255)
-    image = SVGAndImageField(upload_to='categories/', null=True, blank=True)
-
-    def __str__(self):
-        return self.name
-
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
@@ -32,6 +26,16 @@ class Company(models.Model):
     address = models.TextField(null=True, blank=True)
     phone_number = models.CharField(max_length=123 ,null=True, blank=True)
     rating = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=255)
+    image = SVGAndImageField(upload_to='categories/', null=True, blank=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE)
+    parent_category = models.ForeignKey('self', on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name

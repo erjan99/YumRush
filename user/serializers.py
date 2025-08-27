@@ -1,5 +1,6 @@
 from .models import MyUser
 from order.models import Delivery
+from product.models import Product
 from rest_framework import serializers
 
 
@@ -55,10 +56,19 @@ class UserDeliverySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+#MANAGER
 class CourierAccountCreationSerializer(serializers.ModelSerializer):
     class Meta:
         model = MyUser
         fields = ('username', 'email', 'password', 'phone_number', )
+
+
+class ProductCreationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ('name', 'original_price', 'discounted_price', 'category', 'description', 'image', 'ingredients', 'grams')
+
+
 
 
 

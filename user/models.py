@@ -24,7 +24,7 @@ class MyUserManager(BaseUserManager):
 
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
-
+from product.models import Company
 
 class MyUser(AbstractBaseUser):
     email = models.EmailField(max_length=255, unique=True,)
@@ -32,6 +32,7 @@ class MyUser(AbstractBaseUser):
     phone_number = models.CharField(max_length=255, blank=True, null=True)
     avatar = models.ImageField(upload_to='media/user_avatars/', blank=True, null=True)
     address = models.TextField(max_length=255, blank=True, null=True)
+    company = models.ForeignKey(Company, on_delete=models.SET_NULL, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_created_at = models.DateTimeField(blank=True, null=True)

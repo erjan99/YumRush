@@ -9,7 +9,7 @@ urlpatterns = [
     path('<int:pk>/rate/', OrderRateView.as_view(), name='rate_order'),
 
     # Courier orders
-    path('courier/available_orders/', CourierOrdersView.as_view(), name='courier_orders'),
+    path('courier/available_orders/', CourierAvailableOrdersView.as_view(), name='courier_orders'),
     path('courier/completed_orders/', CourierCompletedOrdersView.as_view(), name='courier_completed_orders'),
 
 ]

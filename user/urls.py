@@ -15,4 +15,10 @@ urlpatterns = [
     path('login_otp_verification/', UserLoginOTPVerificationView.as_view()),
     path('registration_otp_verification/', UserRegistrationOTPVerificationView.as_view()),
 
+    #MANAGER
+    path('manager/courier_account_creation/', CourierAccountCreationView.as_view()),
+    path('manager/create_product/', ProductCreateView.as_view()),
+    path('manager/update_product/', ProductUpdateView.as_view()),
+    path('manager/delete_product/', ProductDeleteView.as_view()),
+
 ]

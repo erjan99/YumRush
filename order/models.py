@@ -20,7 +20,7 @@ class Order(models.Model):
         ('delivered', 'Доставлено'),
         ('cancelled', 'Отменено'),
     ]
-    status = models.CharField(max_length=50, default='Pending')  # e.g., Pending, Shipped, Delivered, Cancelled
+    status = models.CharField(max_length=50,choices=STATUS_CHOICES, default='Pending')  # e.g., Pending, Shipped, Delivered, Cancelled
     rating = PositiveSmallIntegerField(null=True, blank=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
@@ -50,7 +50,7 @@ class Delivery(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Delivery for Order {self.order.id} - {'Delivery' if self.delivery else 'Pickup'}"
+        return f"Delivery for Order {self.order.id} - {'Delivery' if self.delivery_type else 'Pickup'}"
 
 
 class OrderItem(models.Model):

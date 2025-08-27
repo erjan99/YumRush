@@ -83,7 +83,7 @@ class UserOrderHistoryView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class CourierOrdersView(APIView):
+class CourierAvailableOrdersView(APIView):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -105,8 +105,8 @@ class CourierOrdersView(APIView):
                 "error": "Недостаточно прав. Только курьеры могут просматривать заказы"
             }, status=status.HTTP_403_FORBIDDEN)
 
-        orders = Order.objects.all().order_by('-created_at')
-        serializer = OrderSerializer(orders, many=True)
+        available_orders = Order.objects.filter(assigned_courier__isnull=True, status='new').order_by('-created_at')
+        serializer = OrderSerializer(available_orders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

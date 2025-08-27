@@ -6,7 +6,7 @@ from django.contrib.auth import user_login_failed, authenticate
 from django.core.mail import send_mail
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.generics import UpdateAPIView
+from rest_framework.generics import UpdateAPIView, CreateAPIView, DestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,6 +18,8 @@ from .services import *
 from .serializers import *
 from django.conf import settings
 from django.db import IntegrityError
+
+from ..product.models import Product
 
 
 #AUTHENTICATION
@@ -481,6 +483,221 @@ class UserRegistrationOTPVerificationView(APIView):
 
 #MANAGER
 
-class ManagerCourierCreationView(APIView):
+class CourierAccountCreationView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = ManagerCourierCreationSerializer
+
+    def post(self, request):
+        if request.user.role != 'manager':
+            return Response({'error':'not enough rights'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = CourierAccountCreationSerializer
+        if serializer.is_valid(raise_exception=True):
+            courier = MyUser(
+                email=serializer.validated_data['email'],
+                username=serializer.validated_data['username'],
+                password=serializer.validated_data['password'],
+                phone_number=serializer.validated_data['phone_number'],
+                is_2fa_enabled=False
+            )
+
+            courier.save()
+            return Response(status=status.HTTP_201_CREATED)
+        return Response({'error':'Ivalid input'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductCreateView(CreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductCreationSerializer
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=['product'],
+        operation_description="Create a new product in the system (manager-only operation).",
+        request_body=ProductCreationSerializer,
+        responses={
+            201: openapi.Response(
+                description="Product successfully created",
+                examples={
+                    "application/json": {
+                        "id": 1,
+                        "name": "Hamburger",
+                        "original_price": "10.00",
+                        "discounted_price": "8.99",
+                        "category": {"id": 1, "name": "Burgers"},
+                        "description": "Delicious hamburger",
+                        "image": "http://example.com/media/products/hamburger.jpg",
+                        "ingredients": "Beef, lettuce, tomato, sesame bun",
+                        "grams": 300,
+                        "company": {"id": 1, "name": "FastFoodCo"}
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="Invalid input",
+                examples={
+                    "application/json": {"error": "Invalid input data"}
+                }
+            ),
+            403: openapi.Response(
+                description="Permission denied",
+                examples={
+                    "application/json": {"error": "Not enough rights"}
+                }
+            )
+        },
+        security=[{"Bearer": []}]
+    )
+
+    def post(self, request):
+        if request.user.role != 'manager':
+            return Response({'error':'not enough rights'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = ProductCreationSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            try:
+                product = Product(
+                    name=serializer.validated_data['name'],
+                    original_price=serializer.validated_data['original_price'],
+                    discounted_price=serializer.validated_data['discounted_price'],
+                    description=serializer.validated_data['description'],
+                    image=serializer.validated_data['image'],
+                    category=serializer.validated_data['category'],
+                    grams=serializer.validated_data['grams'],
+                    ingredients=serializer.validated_data['ingredients'],
+                    company=request.user.company
+                )
+                product.save()
+                return Response(ProductCreationSerializer(product).data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'error': 'Invalid input'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductUpdateView(UpdateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductCreationSerializer
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=['product'],
+        operation_description="Update an existing product in the system by ID (manager-only operation).",
+        request_body=ProductCreationSerializer,
+        responses={
+            200: openapi.Response(
+                description="Product successfully updated",
+                examples={
+                    "application/json": {
+                        "id": 1,
+                        "name": "Updated Hamburger",
+                        "original_price": "10.00",
+                        "discounted_price": "8.50",
+                        "category": {"id": 1, "name": "Burgers"},
+                        "description": "Updated description",
+                        "image": "http://example.com/media/products/hamburger_updated.jpg",
+                        "ingredients": "Beef, lettuce, tomato, sesame bun",
+                        "grams": 350,
+                        "company": {"id": 1, "name": "FastFoodCo"}
+                    }
+                }
+            ),
+            400: openapi.Response(
+                description="Invalid input",
+                examples={
+                    "application/json": {"error": "Invalid input data"}
+                }
+            ),
+            403: openapi.Response(
+                description="Permission denied",
+                examples={
+                    "application/json": {"error": "Not enough rights"}
+                }
+            ),
+            404: openapi.Response(
+                description="Product not found",
+                examples={
+                    "application/json": {"error": "Product not found"}
+                }
+            )
+        },
+        security=[{"Bearer": []}]
+    )
+
+
+    def post(self, request):
+        if request.user.role != 'manager':
+            return Response({'error':'not enough rights'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = ProductCreationSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            try:
+                product = Product.objects.get(id=serializer.validated_data['id'])
+                product.name = serializer.validated_data['name']
+                product.original_price = serializer.validated_data['original_price']
+                product.discounted_price = serializer.validated_data['discounted_price']
+                product.description = serializer.validated_data['description']
+                product.image = serializer.validated_data['image']
+                product.category = serializer.validated_data['category']
+                product.grams = serializer.validated_data['grams']
+                product.ingredients = serializer.validated_data['ingredients']
+                product.save()
+                return Response(ProductCreationSerializer(product).data, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': 'Invalid input'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductDeleteView(DestroyAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductCreationSerializer
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        tags=['product'],
+        operation_description="Delete an existing product from the system by ID (manager-only operation).",
+        manual_parameters=[
+            openapi.Parameter(
+                name='pk',
+                in_=openapi.IN_PATH,
+                description='ID of the product to delete',
+                type=openapi.TYPE_INTEGER,
+                required=True,
+            )
+        ],
+        responses={
+            200: openapi.Response(
+                description="Product successfully deleted",
+                examples={
+                    "application/json": {
+                        "message": "Product Hamburger successfully deleted."
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Permission denied",
+                examples={
+                    "application/json": {"error": "Not enough rights"}
+                }
+            ),
+            404: openapi.Response(
+                description="Product not found",
+                examples={
+                    "application/json": {"error": "Product not found."}
+                }
+            )
+        },
+        security=[{"Bearer": []}]
+    )
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            self.perform_destroy(instance)
+            return Response(
+                {'message': f'Product {instance.name} successfully deleted.'},
+                status=status.HTTP_200_OK
+            )
+        except Product.DoesNotExist:
+            return Response({'error': 'Product not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
