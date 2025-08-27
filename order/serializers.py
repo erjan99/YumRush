@@ -105,3 +105,10 @@ class CourierOrderDeliverySerializer(serializers.ModelSerializer):
         model = Order, Delivery
         fields = ['id', 'created_at', 'status', 'delivery_address', 'total_price']
 
+
+class OrderUpdateStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['status']
+
+

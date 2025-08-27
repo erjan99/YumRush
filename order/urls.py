@@ -12,4 +12,9 @@ urlpatterns = [
     path('courier/available_orders/', CourierAvailableOrdersView.as_view(), name='courier_orders'),
     path('courier/completed_orders/', CourierCompletedOrdersView.as_view(), name='courier_completed_orders'),
 
+    # Order's status
+    path('courier/<int:pk>/accept/', OrderAcceptView.as_view(), name='order-accept'),
+    path('courier/<int:pk>/in-progress/', OrderInProgressView.as_view(), name='order-in-progress'),
+    path('courier/<int:pk>/delivered/', OrderDeliveredView.as_view(), name='order-delivered'),
+
 ]

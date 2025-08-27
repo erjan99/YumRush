@@ -2,6 +2,7 @@
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.generics import UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -249,3 +250,79 @@ class OrderHistoryDetailView(APIView):
             return Response({'error': 'Заказ не найден'}, status=status.HTTP_404_NOT_FOUND)
         serializers = UserOrderHistoryDetailSerializer(order)
         return Response(serializers.data, status=status.HTTP_200_OK)
+
+
+class OrderAcceptView(UpdateAPIView):
+    queryset = Order.objects.filter(assigned_courier__isnull=True, status='new')  # Фильтруются только доступные заказы
+    serializer_class = OrderUpdateStatusSerializer
+    permission_classes = [IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        # Проверяем, что пользователь является курьером
+        if request.user.role != 'courier':
+            return Response({'error': 'Only couriers can accept orders'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Получаем объект заказа
+        try:
+            order = self.get_object()
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found or already assigned'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Обновляем поля заказа
+        order.assigned_courier = request.user
+        order.status = 'assigned'
+        order.save()
+
+        # Возвращаем обновленный заказ
+        serializer = self.get_serializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OrderInProgressView(UpdateAPIView):
+    queryset = Order.objects.filter(status='assigned')  # Фильтруются только доступные заказы
+    serializer_class = OrderUpdateStatusSerializer
+    permission_classes = [IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        # Проверяем, что пользователь является курьером
+        if request.user.role != 'courier':
+            return Response({'error': 'Only couriers can accept orders'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Получаем объект заказа
+        try:
+            order = self.get_object()
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found or already assigned'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Обновляем поля заказа
+        order.status = 'in_progress'
+        order.save()
+
+        # Возвращаем обновленный заказ
+        serializer = self.get_serializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OrderDeliveredView(UpdateAPIView):
+    queryset = Order.objects.filter(status='in_progress')  # Фильтруются только доступные заказы
+    serializer_class = OrderUpdateStatusSerializer
+    permission_classes = [IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        # Проверяем, что пользователь является курьером
+        if request.user.role != 'courier':
+            return Response({'error': 'Only couriers can accept orders'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Получаем объект заказа
+        try:
+            order = self.get_object()
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found or already assigned'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Обновляем поля заказа
+        order.status = 'delivered'
+        order.save()
+
+        # Возвращаем обновленный заказ
+        serializer = self.get_serializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
