@@ -34,6 +34,7 @@ class Company(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=255)
     image = SVGAndImageField(upload_to='categories/', null=True, blank=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, blank=True, null=True, related_name='categories')
     parent_category = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True, related_name='subcategories')
 
     def __str__(self):
