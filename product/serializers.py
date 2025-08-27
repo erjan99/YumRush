@@ -34,5 +34,3 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 class AddToCartSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(required=True)
     quantity = serializers.IntegerField(default=1)
-
-class CategoryCreationSerializer()

@@ -5,12 +5,14 @@ from django.db.models import PositiveSmallIntegerField
 
 from product.models import Product
 
+
+
 user = get_user_model()
 
 
 # ORDER RELATED MODELS
 class Order(models.Model):
-    assigned_courier = models.ForeignKey('user.MyUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_orders')
+    assigned_courier = models.ForeignKey(user, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_orders')
     user = models.ForeignKey(user, on_delete=models.CASCADE, related_name='orders')
     created_at = models.DateTimeField(auto_now_add=True)
     STATUS_CHOICES = [
