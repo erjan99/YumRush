@@ -179,7 +179,7 @@ class CreateOrderView(APIView):
             order = Order.objects.create(
                 user=request.user,
                 total_price=sum(item.total_price for item in cart.items.all()),
-                status='pending'
+                status='new'
             )
 
             # Переносим товары из корзины в заказ
@@ -193,7 +193,7 @@ class CreateOrderView(APIView):
             request.user.balance -= cart_total_price
             request.user.save()
 
-            is_free_delivery = True if cart_total_price < 1000 else False
+            is_free_delivery = True if cart_total_price <= 1000 else False
             # Создаем информацию о доставке
             delivery_data = serializer.validated_data
             Delivery.objects.create(
@@ -203,7 +203,7 @@ class CreateOrderView(APIView):
                 receiver_phone_number=delivery_data['receiver_phone_number'],
                 delivery_address=delivery_data.get('delivery_address', ''),
                 description=delivery_data.get('description', ''),
-                is_free_delivery=delivery_data.get('is_free_delivery', is_free_delivery)
+                is_free_delivery=is_free_delivery
             )
 
             # Очищаем корзину
@@ -245,11 +245,14 @@ class OrderHistoryDetailView(APIView):
 
 
     def get(self, request, pk):
-        order = Order.objects.get(id=pk, user=request.user)
-        if not order:
+        try:
+            order = Order.objects.get(id=pk, user=request.user)  # ✅ Обернуто в try-except
+        except Order.DoesNotExist:
             return Response({'error': 'Заказ не найден'}, status=status.HTTP_404_NOT_FOUND)
-        serializers = UserOrderHistoryDetailSerializer(order)
-        return Response(serializers.data, status=status.HTTP_200_OK)
+
+        serializer = UserOrderHistoryDetailSerializer(order)  # ✅ Исправлено имя переменной
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 class OrderAcceptView(UpdateAPIView):

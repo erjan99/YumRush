@@ -15,7 +15,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
-    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
@@ -71,10 +71,10 @@ class CreateOrderSerializer(serializers.Serializer):
     receiver_name = serializers.CharField(max_length=123, required=True)
     receiver_phone_number = serializers.CharField(max_length=123, required=True)
     delivery_address = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    is_free_delivery = serializers.BooleanField(default=False)
+    description = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
     def validate(self, data):
-        if data['delivery_type'] == 'delivery' and not data.get['delivery_address']:
+        if data['delivery_type'] == 'delivery' and not data.get('delivery_address'):
             raise serializers.ValidationError({
                 'delivery_address':'Address can not be empty'
             })
