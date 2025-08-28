@@ -47,11 +47,26 @@ class UserRegisterView(APIView):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             try:
+                # Проверяем существует ли пользователь с таким email
                 if MyUser.objects.filter(email=serializer.validated_data['email']).exists():
                     return Response(
                         {'error': 'Пользователь с таким email уже существует'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
+
+                # Проверяем существует ли уже временная регистрация с таким email
+                if TemporaryRegistration.objects.filter(email=serializer.validated_data['email']).exists():
+                    # Удаляем предыдущую временную регистрацию
+                    TemporaryRegistration.objects.filter(email=serializer.validated_data['email']).delete()
+
+                # Проверяем username на уникальность в основной и временной таблицах
+                if (MyUser.objects.filter(username=serializer.validated_data['username']).exists() or
+                        TemporaryRegistration.objects.filter(username=serializer.validated_data['username']).exists()):
+                    return Response(
+                        {'error': 'Пользователь с таким именем уже существует'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
                 temp_reg = TemporaryRegistration(
                     username=serializer.validated_data['username'],
                     email=serializer.validated_data['email'],
@@ -62,6 +77,7 @@ class UserRegisterView(APIView):
                 temp_reg.otp = otp_code
                 temp_reg.otp_created_at = timezone.now()
                 temp_reg.save()
+
                 try:
                     send_mail(
                         subject='Подтверждение регистрации',
@@ -71,11 +87,12 @@ class UserRegisterView(APIView):
                         fail_silently=False,
                     )
                 except Exception as e:
-                    # Логируем ошибку отправки email
-                    print(f"Ошибка отправки email: {e}")
-                    # Можно также удалить пользователя, если email критичен
-                    # user.delete()
-                    # return Response({'error': 'Ошибка отправки email'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    # Если отправка email не удалась, удаляем временную регистрацию
+                    temp_reg.delete()
+                    return Response(
+                        {'error': 'Ошибка отправки email. Попробуйте позже.'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
 
                 response_data = {
                     'user_id': temp_reg.id,
@@ -87,7 +104,7 @@ class UserRegisterView(APIView):
 
             except IntegrityError:
                 return Response(
-                    {'error': 'Пользователь с таким email уже существует'},
+                    {'error': 'Пользователь с такими данными уже существует'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -420,65 +437,80 @@ class UserRegistrationOTPVerificationView(APIView):
     def post(self, request):
         serializer = UserOTPVerificationSerializer(data=request.data)
 
-        if serializer.is_valid(raise_exception=True):
-            user_id = serializer.validated_data['user_id']
+        if serializer.is_valid():
+            temp_id = serializer.validated_data['user_id']
             entered_otp = serializer.validated_data['otp_code']
 
             try:
-                user = MyUser.objects.get(id=user_id)
-            except MyUser.DoesNotExist:
+                temp_reg = TemporaryRegistration.objects.get(id=temp_id)
+            except TemporaryRegistration.DoesNotExist:
                 return Response(
-                    {'error': 'User not found'},
+                    {'error': 'Регистрационный запрос не найден'},
                     status=status.HTTP_404_NOT_FOUND
                 )
 
             # Проверка срока действия OTP
-            otp_expiry_minutes = 10  # Для регистрации можно дать больше времени
+            otp_expiry_minutes = 10
             current_time = timezone.now()
 
-            if user.otp_created_at and (current_time - user.otp_created_at).total_seconds() > (otp_expiry_minutes * 60):
-                user.otp = None
-                user.otp_created_at = None
-                user.save()
+            if temp_reg.otp_created_at and (current_time - temp_reg.otp_created_at).total_seconds() > (otp_expiry_minutes * 60):
+                temp_reg.delete()  # Удаляем истекшую запись
                 return Response(
-                    {'error': 'OTP код истек. Запросите новый код'},
+                    {'error': 'OTP код истек. Пройдите регистрацию заново'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             # Проверка OTP кода
-            if not verifyOTP(entered_otp, user.otp):
+            if not verifyOTP(entered_otp, temp_reg.otp):
                 return Response(
                     {'error': 'Неверный OTP код'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Очищаем OTP после успешной верификации
-            user.otp = None
-            user.otp_created_at = None
-            # Можно также активировать пользователя, если нужно
-            # user.is_active = True
-            user.save()
+            # Создаем постоянного пользователя
+            try:
+                # Дополнительная проверка на случай, если пользователь был создан после отправки OTP
+                if MyUser.objects.filter(email=temp_reg.email).exists():
+                    temp_reg.delete()
+                    return Response(
+                        {'error': 'Пользователь с таким email уже существует'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
-            # Генерируем JWT токены для автоматического логина
-            refresh = RefreshToken.for_user(user)
+                user = MyUser(
+                    username=temp_reg.username,
+                    email=temp_reg.email,
+                )
+                user.password = temp_reg.password
+                user.save()
 
-            return Response(
-                {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                    'user_id': user.id,
-                    'user_role': user.role,
-                    'email': user.email,
-                    'username': user.username,
-                    'message': 'Регистрация успешно завершена'
-                },
-                status=status.HTTP_200_OK
-            )
+                # Удаляем временную регистрацию только после успешного создания пользователя
+                temp_reg.delete()
 
-        return Response(
-            {'error': 'Предоставлена неверная информация'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+                # Генерируем JWT токены для автоматического логина
+                refresh = RefreshToken.for_user(user)
+
+                return Response(
+                    {
+                        'refresh': str(refresh),
+                        'access': str(refresh.access_token),
+                        'user_id': user.id,
+                        'user_role': user.role,
+                        'email': user.email,
+                        'username': user.username,
+                        'message': 'Регистрация успешно завершена'
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            except IntegrityError:
+                temp_reg.delete()
+                return Response(
+                    {'error': 'Ошибка создания пользователя. Попробуйте заново'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 #MANAGER
