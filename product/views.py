@@ -110,9 +110,9 @@ class MainPageView(APIView):
 
         try:
             quantity = int(quantity)
-            if quantity < -100 or quantity > 100:  # Разумные ограничения
+            if quantity <= 0 or quantity > 100:
                 return Response({
-                    'error': 'Количество должно быть от -100 до 100'
+                    'error': 'Количество должно быть от 0 до 100'
                 }, status=status.HTTP_400_BAD_REQUEST)
         except (ValueError, TypeError):
             return Response({

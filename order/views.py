@@ -155,7 +155,6 @@ class CreateOrderView(APIView):
         }
     )
     def post(self, request):
-        # Получаем активную корзину пользователя
         try:
             cart = Cart.objects.get(user=request.user, is_active=True)
             if not cart.items.exists():
@@ -195,6 +194,7 @@ class CreateOrderView(APIView):
 
             is_free_delivery = True if cart_total_price <= 1000 else False
             # Создаем информацию о доставке
+
             delivery_data = serializer.validated_data
             Delivery.objects.create(
                 order=order,
@@ -206,12 +206,11 @@ class CreateOrderView(APIView):
                 is_free_delivery=is_free_delivery
             )
 
-            # Очищаем корзину
+
             cart.items.all().delete()
             cart.is_active = False
             cart.save()
 
-            # Возвращаем созданный заказ
             order_serializer = OrderSerializer(order)
             return Response(order_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -246,86 +245,80 @@ class OrderHistoryDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            order = Order.objects.get(id=pk, user=request.user)  # ✅ Обернуто в try-except
+            order = Order.objects.get(id=pk, user=request.user)
         except Order.DoesNotExist:
             return Response({'error': 'Заказ не найден'}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = UserOrderHistoryDetailSerializer(order)  # ✅ Исправлено имя переменной
+        serializer = UserOrderHistoryDetailSerializer(order)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 
 class OrderAcceptView(UpdateAPIView):
-    queryset = Order.objects.filter(assigned_courier__isnull=True, status='new')  # Фильтруются только доступные заказы
+    queryset = Order.objects.filter(assigned_courier__isnull=True, status='new')
     serializer_class = OrderUpdateStatusSerializer
     permission_classes = [IsAuthenticated]
 
     def update(self, request, *args, **kwargs):
-        # Проверяем, что пользователь является курьером
         if request.user.role != 'courier':
             return Response({'error': 'Only couriers can accept orders'}, status=status.HTTP_403_FORBIDDEN)
 
-        # Получаем объект заказа
+
         try:
             order = self.get_object()
         except Order.DoesNotExist:
             return Response({'error': 'Order not found or already assigned'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Обновляем поля заказа
+
         order.assigned_courier = request.user
         order.status = 'assigned'
         order.save()
 
-        # Возвращаем обновленный заказ
+
         serializer = self.get_serializer(order)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class OrderInProgressView(UpdateAPIView):
-    queryset = Order.objects.filter(status='assigned')  # Фильтруются только доступные заказы
+    queryset = Order.objects.filter(status='assigned')
     serializer_class = OrderUpdateStatusSerializer
     permission_classes = [IsAuthenticated]
 
     def update(self, request, *args, **kwargs):
-        # Проверяем, что пользователь является курьером
         if request.user.role != 'courier':
             return Response({'error': 'Only couriers can accept orders'}, status=status.HTTP_403_FORBIDDEN)
 
-        # Получаем объект заказа
         try:
             order = self.get_object()
         except Order.DoesNotExist:
             return Response({'error': 'Order not found or already assigned'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Обновляем поля заказа
+
         order.status = 'in_progress'
         order.save()
 
-        # Возвращаем обновленный заказ
         serializer = self.get_serializer(order)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class OrderDeliveredView(UpdateAPIView):
-    queryset = Order.objects.filter(status='in_progress')  # Фильтруются только доступные заказы
+    queryset = Order.objects.filter(status='in_progress')
     serializer_class = OrderUpdateStatusSerializer
     permission_classes = [IsAuthenticated]
 
     def update(self, request, *args, **kwargs):
-        # Проверяем, что пользователь является курьером
         if request.user.role != 'courier':
             return Response({'error': 'Only couriers can accept orders'}, status=status.HTTP_403_FORBIDDEN)
 
-        # Получаем объект заказа
+
         try:
             order = self.get_object()
         except Order.DoesNotExist:
             return Response({'error': 'Order not found or already assigned'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Обновляем поля заказа
         order.status = 'delivered'
         order.save()
 
-        # Возвращаем обновленный заказ
+
         serializer = self.get_serializer(order)
         return Response(serializer.data, status=status.HTTP_200_OK)

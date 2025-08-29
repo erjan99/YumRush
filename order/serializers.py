@@ -44,7 +44,7 @@ class OrderRatingSerializer(serializers.ModelSerializer):
         fields = ['id', 'rating']
 
     def validate(self, data):
-        if self.intance.status != "delivered":
+        if self.instance.status != "delivered":
             raise serializers.ValidationError("Нельзя ставить рейтинг до завершения заказа.")
         return data
 

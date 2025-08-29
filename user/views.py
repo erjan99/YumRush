@@ -59,14 +59,6 @@ class UserRegisterView(APIView):
                     # Удаляем предыдущую временную регистрацию
                     TemporaryRegistration.objects.filter(email=serializer.validated_data['email']).delete()
 
-                # Проверяем username на уникальность в основной и временной таблицах
-                if (MyUser.objects.filter(username=serializer.validated_data['username']).exists() or
-                        TemporaryRegistration.objects.filter(username=serializer.validated_data['username']).exists()):
-                    return Response(
-                        {'error': 'Пользователь с таким именем уже существует'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
                 temp_reg = TemporaryRegistration(
                     username=serializer.validated_data['username'],
                     email=serializer.validated_data['email'],
@@ -449,12 +441,11 @@ class UserRegistrationOTPVerificationView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Проверка срока действия OTP
             otp_expiry_minutes = 10
             current_time = timezone.now()
 
             if temp_reg.otp_created_at and (current_time - temp_reg.otp_created_at).total_seconds() > (otp_expiry_minutes * 60):
-                temp_reg.delete()  # Удаляем истекшую запись
+                temp_reg.delete()
                 return Response(
                     {'error': 'OTP код истек. Пройдите регистрацию заново'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -467,9 +458,8 @@ class UserRegistrationOTPVerificationView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Создаем постоянного пользователя
+
             try:
-                # Дополнительная проверка на случай, если пользователь был создан после отправки OTP
                 if MyUser.objects.filter(email=temp_reg.email).exists():
                     temp_reg.delete()
                     return Response(
@@ -484,10 +474,8 @@ class UserRegistrationOTPVerificationView(APIView):
                 user.password = temp_reg.password
                 user.save()
 
-                # Удаляем временную регистрацию только после успешного создания пользователя
                 temp_reg.delete()
 
-                # Генерируем JWT токены для автоматического логина
                 refresh = RefreshToken.for_user(user)
 
                 return Response(
@@ -522,19 +510,18 @@ class CourierAccountCreationView(APIView):
         if request.user.role != 'manager':
             return Response({'error':'not enough rights'}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = CourierAccountCreationSerializer
+        serializer = CourierAccountCreationSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             courier = MyUser(
                 email=serializer.validated_data['email'],
                 username=serializer.validated_data['username'],
-                password=serializer.validated_data['password'],
                 phone_number=serializer.validated_data['phone_number'],
+                role='courier',
                 is_2fa_enabled=False
             )
-
+            courier.set_password(serializer.validated_data['password']),
             courier.save()
             return Response(status=status.HTTP_201_CREATED)
-        return Response({'error':'Ivalid input'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProductCreateView(CreateAPIView):
